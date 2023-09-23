@@ -1,7 +1,8 @@
 use std::fmt::format;
 use rltk::console;
 use specs::prelude::*;
-use crate::{CombatStats, Player, SufferDamage};
+use crate::{CombatStats, Name, Player, SufferDamage};
+use crate::gamelog::GameLog;
 
 pub struct DamageSystem {}
 
@@ -26,12 +27,22 @@ pub fn delete_the_dead(ecs: &mut World) {
         let combat_stats = ecs.read_storage::<CombatStats>();
         let players = ecs.read_storage::<Player>();
         let entities = ecs.entities();
+        let names = ecs.read_storage::<Name>();
+        let mut log = ecs.write_resource::<GameLog>();
+
         for(entity, stats) in (&entities, &combat_stats).join() {
             if stats.hp < 1 {
                 let player = players.get(entity);
                 match player {
-                    None => dead.push(entity),
-                    Some(_) => console::log("You are dead.")
+                    None => {
+                        let victimName = names.get(entity);
+                        if let Some(n) = victimName {
+                            log.entries.push(format!("{} is dead", &n.name));
+                            dead.push(entity);
+                        }
+
+                    },
+                    Some(_) => log.entries.push("You are dead.".into())
                 }
             }
         }
