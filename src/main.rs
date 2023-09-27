@@ -17,11 +17,13 @@ mod damage_system;
 mod gui;
 mod gamelog;
 mod spawner;
+mod inventory_system;
 
 
 use crate::map_indexing_system::MapIndexingSystem;
 use visibility_system::VisibilitySystem;
 use crate::damage_system::DamageSystem;
+use crate::inventory_system::ItemCollectionSystem;
 use crate::melee_combat_system::MeleeCombatSystem;
 use crate::RunState::AwaitingInput;
 
@@ -47,6 +49,9 @@ impl State {
         let mut damage_system = DamageSystem{};
         damage_system.run_now(&self.ecs);
 
+        let mut pickup = ItemCollectionSystem{};
+        pickup.run_now(&self.ecs);
+
         self.ecs.maintain();
     }
 }
@@ -54,6 +59,29 @@ impl State {
 impl GameState for State {
     fn tick(&mut self, ctx: &mut Rltk) {
         ctx.cls();
+
+        // render
+        // -- base map
+        // -- renderables
+        // run state based things
+        // cleanup
+
+        draw_map(&self.ecs, ctx);
+
+        {
+            let positions = self.ecs.read_storage::<Position>();
+            let renderables = self.ecs.read_storage::<Renderable>();
+            let map = self.ecs.fetch::<Map>();
+
+            for (pos, render) in (&positions, &renderables).join() {
+                let idx = map.xy_idx(pos.x, pos.y);
+                if map.visible_tiles[idx] {
+                    ctx.set(pos.x, pos.y, render.fg, render.bg, render.glyph);
+                }
+            }
+
+            gui::draw_ui(&self.ecs, ctx);
+        }
 
         let mut newrunstate;
         {
@@ -77,32 +105,23 @@ impl GameState for State {
                 self.run_systems();
                 newrunstate = AwaitingInput;
             }
+            RunState::ShowInventory => {
+                if gui::show_inventory(self, ctx) == gui::ItemMenuResult::Cancel {
+                    newrunstate = RunState::AwaitingInput
+                }
+            }
         }
         {
             let mut runwriter = self.ecs.write_resource::<RunState>();
             *runwriter = newrunstate;
         }
         damage_system::delete_the_dead(&mut self.ecs);
-
-        draw_map(&self.ecs, ctx);
-
-        let positions = self.ecs.read_storage::<Position>();
-        let renderables = self.ecs.read_storage::<Renderable>();
-        let map = self.ecs.fetch::<Map>();
-
-        for (pos, render) in (&positions, &renderables).join() {
-            let idx = map.xy_idx(pos.x, pos.y);
-            if map.visible_tiles[idx] {
-                ctx.set(pos.x, pos.y, render.fg, render.bg, render.glyph);
-            }
-        }
-
-        gui::draw_ui(&self.ecs, ctx);
     }
 }
 
 #[derive(PartialEq, Copy, Clone)]
-pub enum RunState { AwaitingInput, PreRun, PlayerTurn, MonsterTurn }
+pub enum RunState { AwaitingInput, PreRun, PlayerTurn, MonsterTurn, ShowInventory }
+
 fn main() -> rltk::BError {
     use rltk::RltkBuilder;
     let mut context = RltkBuilder::simple80x50()
@@ -147,4 +166,8 @@ fn register_components(gs: &mut State) {
     gs.ecs.register::<CombatStats>();
     gs.ecs.register::<SufferDamage>();
     gs.ecs.register::<WantsToMelee>();
+    gs.ecs.register::<Item>();
+    gs.ecs.register::<Potion>();
+    gs.ecs.register::<WantsToPickupItem>();
+    gs.ecs.register::<InBackPack>();
 }
