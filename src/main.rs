@@ -23,7 +23,8 @@ mod inventory_system;
 use crate::map_indexing_system::MapIndexingSystem;
 use visibility_system::VisibilitySystem;
 use crate::damage_system::DamageSystem;
-use crate::inventory_system::ItemCollectionSystem;
+use crate::gui::ItemMenuResult;
+use crate::inventory_system::{ItemCollectionSystem, PotionUseSystem};
 use crate::melee_combat_system::MeleeCombatSystem;
 use crate::RunState::AwaitingInput;
 
@@ -51,6 +52,9 @@ impl State {
 
         let mut pickup = ItemCollectionSystem{};
         pickup.run_now(&self.ecs);
+
+        let mut potion_sys = PotionUseSystem{};
+        potion_sys.run_now(&self.ecs);
 
         self.ecs.maintain();
     }
@@ -95,19 +99,31 @@ impl GameState for State {
             }
             RunState::PreRun => {
                 self.run_systems();
+                self.ecs.maintain();
                 newrunstate = RunState::AwaitingInput;
             }
             RunState::PlayerTurn => {
                 self.run_systems();
+                self.ecs.maintain();
                 newrunstate = RunState::MonsterTurn;
             }
             RunState::MonsterTurn => {
                 self.run_systems();
+                self.ecs.maintain();
                 newrunstate = AwaitingInput;
             }
             RunState::ShowInventory => {
-                if gui::show_inventory(self, ctx) == gui::ItemMenuResult::Cancel {
-                    newrunstate = RunState::AwaitingInput
+                let result = gui::show_inventory(self, ctx);
+
+                match result.0 {
+                    ItemMenuResult::Cancel => newrunstate = AwaitingInput,
+                    ItemMenuResult::NoResponse => {}
+                    ItemMenuResult::Selected => {
+                        let item_entity = result.1.unwrap();
+                        let mut intent = self.ecs.write_storage::<WantsToDrinkPotion>();
+                        intent.insert(*self.ecs.fetch::<Entity>(), WantsToDrinkPotion{ potion: item_entity }).expect("Unable to insert potion intent");
+                        newrunstate = RunState::PlayerTurn;
+                    }
                 }
             }
         }
@@ -170,4 +186,5 @@ fn register_components(gs: &mut State) {
     gs.ecs.register::<Potion>();
     gs.ecs.register::<WantsToPickupItem>();
     gs.ecs.register::<InBackPack>();
+    gs.ecs.register::<WantsToDrinkPotion>();
 }

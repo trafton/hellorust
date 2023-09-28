@@ -1,7 +1,7 @@
-use rltk::{RGB, RandomNumberGenerator, FontCharType};
+use super::{BlocksTile, CombatStats, Monster, Name, Player, Position, Renderable, Viewshed};
+use crate::{Item, Potion, Rect, MAPWIDTH};
+use rltk::{FontCharType, RandomNumberGenerator, RGB};
 use specs::prelude::*;
-use crate::{Item, MAPWIDTH, Potion, Rect};
-use super::{CombatStats, Player, Renderable, Name, Position, Viewshed, Monster, BlocksTile};
 
 const MAX_MONSTERS: i32 = 4;
 const MAX_ITEMS: i32 = 2;
@@ -14,7 +14,7 @@ pub fn spawn_room(ecs: &mut World, room: &Rect) {
         let mut rng = ecs.write_resource::<RandomNumberGenerator>();
 
         let num_monsters = rng.roll_dice(1, MAX_MONSTERS + 2) - 3;
-        for _i in 0 .. num_monsters {
+        for _i in 0..num_monsters {
             let mut added = false;
             while !added {
                 let x = (room.x1 + rng.roll_dice(1, i32::abs(room.x2 - room.x1))) as usize;
@@ -28,7 +28,7 @@ pub fn spawn_room(ecs: &mut World, room: &Rect) {
         }
 
         let num_items = rng.roll_dice(1, MAX_ITEMS + 2) - 3;
-        for _i in 0 .. num_items {
+        for _i in 0..num_items {
             let mut added = false;
             while !added {
                 let x = (room.x1 + rng.roll_dice(1, i32::abs(room.x2 - room.x1))) as usize;
@@ -58,39 +58,45 @@ pub fn spawn_room(ecs: &mut World, room: &Rect) {
 }
 
 fn health_potion(ecs: &mut World, x: i32, y: i32) {
-    ecs
-        .create_entity()
-        .with(Position{x, y})
-        .with(Renderable{
+    ecs.create_entity()
+        .with(Position { x, y })
+        .with(Renderable {
             glyph: rltk::to_cp437('¡'),
             fg: RGB::named(rltk::MAGENTA),
             bg: RGB::named(rltk::BLACK),
         })
-        .with(Name{ name: "Health Potion".to_string() })
-        .with(Item{})
-        .with(Potion{ heal_amount: 8 })
+        .with(Name {
+            name: "Health Potion".to_string(),
+        })
+        .with(Item {})
+        .with(Potion { heal_amount: 8 })
         .build();
 }
 
 pub fn player(ecs: &mut World, player_x: i32, player_y: i32) -> Entity {
-    ecs
-        .create_entity()
-        .with(Position{x:player_x, y: player_y})
-        .with(Renderable{
+    ecs.create_entity()
+        .with(Position {
+            x: player_x,
+            y: player_y,
+        })
+        .with(Renderable {
             glyph: rltk::to_cp437('@'),
             fg: RGB::named(rltk::YELLOW),
             bg: RGB::named(rltk::BLACK),
         })
-        .with(Player{})
-        .with(Viewshed{
+        .with(Player {})
+        .with(Viewshed {
             visible_tiles: Vec::new(),
             range: 8,
             dirty: true,
         })
-        .with(Name{ name: "Player".to_string() })
-        .with(CombatStats{
+        .with(Name {
+            name: "Player".to_string(),
+        })
+        .with(CombatStats {
             max_hp: 30,
-            hp: 30,
+            hp: 10,
+           // hp: 30,
             defence: 2,
             power: 5,
         })
@@ -101,12 +107,12 @@ pub fn random_monster(ecs: &mut World, x: i32, y: i32) {
     let roll: i32;
     {
         let mut rng = ecs.write_resource::<RandomNumberGenerator>();
-        roll = rng.roll_dice(1,2);
+        roll = rng.roll_dice(1, 2);
     }
 
     match roll {
-        1 => {orc(ecs, x, y)}
-        _ => {goblin(ecs, x, y)}
+        1 => orc(ecs, x, y),
+        _ => goblin(ecs, x, y),
     }
 }
 
@@ -120,16 +126,28 @@ fn orc(ecs: &mut World, x: i32, y: i32) {
 
 fn monster<S: ToString>(ecs: &mut World, x: i32, y: i32, glyph: FontCharType, name: S) {
     ecs.create_entity()
-        .with(Position{ x, y })
-        .with(Renderable{
+        .with(Position { x, y })
+        .with(Renderable {
             glyph,
             fg: RGB::named(rltk::RED),
             bg: RGB::named(rltk::BLACK),
         })
-        .with(Viewshed{ visible_tiles : Vec::new(), range: 8, dirty: true })
-        .with(Monster{})
-        .with(Name{ name : name.to_string() })
-        .with(BlocksTile{})
-        .with(CombatStats{ max_hp: 16, hp: 16, defence: 1, power: 4 })
+        .with(Viewshed {
+            visible_tiles: Vec::new(),
+            range: 8,
+            dirty: true,
+        })
+        .with(Monster {})
+        .with(Name {
+            name: name.to_string(),
+        })
+        .with(BlocksTile {})
+        .with(CombatStats {
+            max_hp: 16,
+            hp: 16,
+            defence: 1,
+            power: 0,
+            //power: 4,
+        })
         .build();
 }
