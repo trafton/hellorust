@@ -24,7 +24,7 @@ use crate::map_indexing_system::MapIndexingSystem;
 use visibility_system::VisibilitySystem;
 use crate::damage_system::DamageSystem;
 use crate::gui::ItemMenuResult;
-use crate::inventory_system::{ItemCollectionSystem, PotionUseSystem};
+use crate::inventory_system::{ItemCollectionSystem, ItemDropSystem, PotionUseSystem};
 use crate::melee_combat_system::MeleeCombatSystem;
 use crate::RunState::AwaitingInput;
 
@@ -56,6 +56,9 @@ impl State {
         let mut potion_sys = PotionUseSystem{};
         potion_sys.run_now(&self.ecs);
 
+        let mut drop_items = ItemDropSystem {};
+        drop_items.run_now(&self.ecs);
+
         self.ecs.maintain();
     }
 }
@@ -77,11 +80,11 @@ impl GameState for State {
             let renderables = self.ecs.read_storage::<Renderable>();
             let map = self.ecs.fetch::<Map>();
 
-            for (pos, render) in (&positions, &renderables).join() {
+            let mut data = (&positions, &renderables).join().collect::<Vec<_>>();
+            data.sort_by(|&a, &b| b.1.render_order.cmp(&a.1.render_order) );
+            for (pos, render) in data.iter() {
                 let idx = map.xy_idx(pos.x, pos.y);
-                if map.visible_tiles[idx] {
-                    ctx.set(pos.x, pos.y, render.fg, render.bg, render.glyph);
-                }
+                if map.visible_tiles[idx] { ctx.set(pos.x, pos.y, render.fg, render.bg, render.glyph) }
             }
 
             gui::draw_ui(&self.ecs, ctx);
@@ -126,6 +129,19 @@ impl GameState for State {
                     }
                 }
             }
+            RunState::ShowDropItem => {
+                let result = gui::drop_item_menu(self, ctx);
+                match result.0 {
+                    gui::ItemMenuResult::Cancel => newrunstate = RunState::AwaitingInput,
+                    gui::ItemMenuResult::NoResponse => {}
+                    gui::ItemMenuResult::Selected => {
+                        let item_entity = result.1.unwrap();
+                        let mut intent = self.ecs.write_storage::<WantsToDropItem>();
+                        intent.insert(*self.ecs.fetch::<Entity>(), WantsToDropItem{ item: item_entity }).expect("Unable to insert intent");
+                        newrunstate = RunState::PlayerTurn;
+                    }
+                }
+            }
         }
         {
             let mut runwriter = self.ecs.write_resource::<RunState>();
@@ -136,12 +152,12 @@ impl GameState for State {
 }
 
 #[derive(PartialEq, Copy, Clone)]
-pub enum RunState { AwaitingInput, PreRun, PlayerTurn, MonsterTurn, ShowInventory }
+pub enum RunState { AwaitingInput, PreRun, PlayerTurn, MonsterTurn, ShowInventory, ShowDropItem }
 
 fn main() -> rltk::BError {
     use rltk::RltkBuilder;
     let mut context = RltkBuilder::simple80x50()
-        .with_title("Roguelike Tutorial")
+        .with_title("Rouge")
         .build()?;
 
     let mut gs = State {
@@ -187,4 +203,5 @@ fn register_components(gs: &mut State) {
     gs.ecs.register::<WantsToPickupItem>();
     gs.ecs.register::<InBackPack>();
     gs.ecs.register::<WantsToDrinkPotion>();
+    gs.ecs.register::<WantsToDropItem>();
 }
