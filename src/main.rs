@@ -24,7 +24,7 @@ use crate::map_indexing_system::MapIndexingSystem;
 use visibility_system::VisibilitySystem;
 use crate::damage_system::DamageSystem;
 use crate::gui::ItemMenuResult;
-use crate::inventory_system::{ItemCollectionSystem, ItemDropSystem, PotionUseSystem};
+use crate::inventory_system::{ItemCollectionSystem, ItemDropSystem, ItemUseSystem};
 use crate::melee_combat_system::MeleeCombatSystem;
 use crate::RunState::AwaitingInput;
 
@@ -53,7 +53,7 @@ impl State {
         let mut pickup = ItemCollectionSystem{};
         pickup.run_now(&self.ecs);
 
-        let mut potion_sys = PotionUseSystem{};
+        let mut potion_sys = ItemUseSystem {};
         potion_sys.run_now(&self.ecs);
 
         let mut drop_items = ItemDropSystem {};
@@ -123,8 +123,8 @@ impl GameState for State {
                     ItemMenuResult::NoResponse => {}
                     ItemMenuResult::Selected => {
                         let item_entity = result.1.unwrap();
-                        let mut intent = self.ecs.write_storage::<WantsToDrinkPotion>();
-                        intent.insert(*self.ecs.fetch::<Entity>(), WantsToDrinkPotion{ potion: item_entity }).expect("Unable to insert potion intent");
+                        let mut intent = self.ecs.write_storage::<WantsToUseItem>();
+                        intent.insert(*self.ecs.fetch::<Entity>(), WantsToUseItem { item: item_entity }).expect("Unable to insert potion intent");
                         newrunstate = RunState::PlayerTurn;
                     }
                 }
@@ -175,6 +175,8 @@ fn main() -> rltk::BError {
     let player_entity = spawner::player(&mut gs.ecs, player_x, player_y);
     gs.ecs.insert(player_entity);
 
+    spawner::test_room(&mut gs.ecs, map.rooms.first().unwrap());
+
     for room in map.rooms.iter().skip(1) {
         spawner::spawn_room(&mut gs.ecs, room);
     }
@@ -199,9 +201,12 @@ fn register_components(gs: &mut State) {
     gs.ecs.register::<SufferDamage>();
     gs.ecs.register::<WantsToMelee>();
     gs.ecs.register::<Item>();
-    gs.ecs.register::<Potion>();
+    gs.ecs.register::<ProvidesHealing>();
     gs.ecs.register::<WantsToPickupItem>();
     gs.ecs.register::<InBackPack>();
-    gs.ecs.register::<WantsToDrinkPotion>();
+    gs.ecs.register::<WantsToUseItem>();
     gs.ecs.register::<WantsToDropItem>();
+    gs.ecs.register::<Consumable>();
+    gs.ecs.register::<Ranged>();
+    gs.ecs.register::<InflictsDamage>();
 }

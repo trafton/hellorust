@@ -1,5 +1,5 @@
 use super::{BlocksTile, CombatStats, Monster, Name, Player, Position, Renderable, Viewshed};
-use crate::{Item, Potion, Rect, MAPWIDTH};
+use crate::{Item, ProvidesHealing, Rect, MAPWIDTH, Consumable, Ranged, InflictsDamage};
 use rltk::{FontCharType, RandomNumberGenerator, RGB};
 use specs::prelude::*;
 
@@ -53,8 +53,55 @@ pub fn spawn_room(ecs: &mut World, room: &Rect) {
         let x = *idx % MAPWIDTH;
         let y = *idx / MAPWIDTH;
 
-        health_potion(ecs, x as i32, y as i32);
+        random_item(ecs, x as i32, y as i32);
     }
+}
+
+pub fn test_room(ecs: &mut World,room: &Rect) {
+    let mut item_spawn_points: Vec<usize> = Vec::new();
+    {
+        for _i in 0..3 {
+            let mut rng = ecs.write_resource::<RandomNumberGenerator>();
+            let x = (room.x1 + rng.roll_dice(1, i32::abs(room.x2 - room.x1))) as usize;
+            let y = (room.y1 + rng.roll_dice(1, i32::abs(room.y2 - room.y1))) as usize;
+            item_spawn_points.push((y * MAPWIDTH) + x);
+        }
+    }
+    for i in item_spawn_points.iter() {
+        let x = *i % MAPWIDTH;
+        let y = *i / MAPWIDTH;
+        random_item(ecs, x as i32, y as i32);
+    }
+
+}
+fn random_item(ecs: &mut World, x: i32, y: i32) {
+    let roll: i32;
+    {
+        let mut rng = ecs.write_resource::<RandomNumberGenerator>();
+        roll = rng.roll_dice(1,2);
+    }
+
+    match roll {
+        1 => { health_potion(ecs, x, y)}
+        _ => { magic_missile_scroll(ecs, x, y)}
+    }
+}
+
+fn magic_missile_scroll(ecs:&mut World, x: i32, y: i32) {
+    ecs.create_entity()
+        .with(Position{ x, y })
+        .with(Renderable{
+            glyph: rltk::to_cp437(')'),
+            fg: RGB::named(rltk::CYAN),
+            bg: RGB::named(rltk::BLACK),
+            render_order: 2
+        })
+        .with(Name{name: "Magic Missile Scroll".to_string()})
+        .with(Item{})
+        .with(Consumable{})
+        .with(Ranged{range: 6})
+        .with(InflictsDamage{damage:6})
+        .build();
 }
 
 fn health_potion(ecs: &mut World, x: i32, y: i32) {
@@ -70,7 +117,8 @@ fn health_potion(ecs: &mut World, x: i32, y: i32) {
             name: "Health Potion".to_string(),
         })
         .with(Item {})
-        .with(Potion { heal_amount: 8 })
+        .with(Consumable {})
+        .with(ProvidesHealing { heal_amount: 8 })
         .build();
 }
 
