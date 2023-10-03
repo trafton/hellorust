@@ -21,9 +21,7 @@ impl<'a> System<'a> for MeleeCombatSystem {
             if stats.hp > 0 {
                 let target_stats_o = combat_stats.get(wants_melee.target);
                 match target_stats_o {
-                    None => {
-                        log.entries.push(format!("Couldnt find target {:?}", wants_melee.target));
-                    }
+                    None => {}
                     Some(target_stats) => {
                         if target_stats.hp > 0 {
                             let target_name = names.get(wants_melee.target).unwrap();

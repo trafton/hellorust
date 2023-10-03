@@ -1,5 +1,5 @@
 use super::{BlocksTile, CombatStats, Monster, Name, Player, Position, Renderable, Viewshed};
-use crate::{Item, ProvidesHealing, Rect, MAPWIDTH, Consumable, Ranged, InflictsDamage};
+use crate::{Item, ProvidesHealing, Rect, MAPWIDTH, Consumable, Ranged, InflictsDamage, AreaOfEffect, Confusion};
 use rltk::{FontCharType, RandomNumberGenerator, RGB};
 use specs::prelude::*;
 
@@ -78,13 +78,50 @@ fn random_item(ecs: &mut World, x: i32, y: i32) {
     let roll: i32;
     {
         let mut rng = ecs.write_resource::<RandomNumberGenerator>();
-        roll = rng.roll_dice(1,2);
+        roll = rng.roll_dice(1,3);
     }
 
     match roll {
         1 => { health_potion(ecs, x, y)}
+        2 => { fireball_scroll(ecs, x, y)}
+        3 => {confusion_scroll(ecs, x, y)}
         _ => { magic_missile_scroll(ecs, x, y)}
     }
+}
+
+fn confusion_scroll(ecs: &mut World, x: i32, y: i32) {
+    ecs.create_entity()
+        .with(Position{x,y})
+        .with(Renderable{
+            glyph: rltk::to_cp437('&'),
+            fg: RGB::named(rltk::PINK),
+            bg: RGB::named(rltk::BLACK),
+            render_order: 2
+        })
+        .with(Name{ name : "Confusion Scroll".to_string() })
+        .with(Item{})
+        .with(Consumable{})
+        .with(Ranged{ range: 6 })
+        .with(Confusion{ turns: 4 })
+        .build();
+}
+
+fn fireball_scroll(ecs: &mut World, x: i32, y: i32) {
+    ecs.create_entity()
+        .with(Position{ x, y })
+        .with(Renderable{
+            glyph: rltk::to_cp437(')'),
+            fg: RGB::named(rltk::ORANGE),
+            bg: RGB::named(rltk::BLACK),
+            render_order: 2
+        })
+        .with(Name{ name : "Fireball Scroll".to_string() })
+        .with(Item{})
+        .with(Consumable{})
+        .with(Ranged{ range: 6 })
+        .with(InflictsDamage{ damage: 20 })
+        .with(AreaOfEffect{ radius: 3 })
+        .build();
 }
 
 fn magic_missile_scroll(ecs:&mut World, x: i32, y: i32) {
@@ -145,8 +182,7 @@ pub fn player(ecs: &mut World, player_x: i32, player_y: i32) -> Entity {
         })
         .with(CombatStats {
             max_hp: 30,
-            hp: 10,
-           // hp: 30,
+            hp: 30,
             defence: 2,
             power: 5,
         })

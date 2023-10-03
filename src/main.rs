@@ -1,3 +1,5 @@
+extern crate serde;
+
 use rltk::{GameState, Point, Rltk, RGB};
 use specs::prelude::*;
 mod components;
@@ -10,27 +12,25 @@ mod monster_ai_system;
 pub use monster_ai_system::*;
 mod rect;
 pub use rect::Rect;
-mod map_indexing_system;
-mod visibility_system;
-mod melee_combat_system;
 mod damage_system;
-mod gui;
 mod gamelog;
-mod spawner;
+mod gui;
 mod inventory_system;
+mod map_indexing_system;
+mod melee_combat_system;
+mod spawner;
+mod visibility_system;
 
-
-use crate::map_indexing_system::MapIndexingSystem;
-use visibility_system::VisibilitySystem;
 use crate::damage_system::DamageSystem;
 use crate::gui::ItemMenuResult;
 use crate::inventory_system::{ItemCollectionSystem, ItemDropSystem, ItemUseSystem};
+use crate::map_indexing_system::MapIndexingSystem;
 use crate::melee_combat_system::MeleeCombatSystem;
 use crate::RunState::AwaitingInput;
-
+use visibility_system::VisibilitySystem;
 
 pub struct State {
-    pub ecs: World
+    pub ecs: World,
 }
 
 impl State {
@@ -44,13 +44,13 @@ impl State {
         let mut mapindex = MapIndexingSystem {};
         mapindex.run_now(&self.ecs);
 
-        let mut melee_combat_system = MeleeCombatSystem{};
+        let mut melee_combat_system = MeleeCombatSystem {};
         melee_combat_system.run_now(&self.ecs);
 
-        let mut damage_system = DamageSystem{};
+        let mut damage_system = DamageSystem {};
         damage_system.run_now(&self.ecs);
 
-        let mut pickup = ItemCollectionSystem{};
+        let mut pickup = ItemCollectionSystem {};
         pickup.run_now(&self.ecs);
 
         let mut potion_sys = ItemUseSystem {};
@@ -65,35 +65,36 @@ impl State {
 
 impl GameState for State {
     fn tick(&mut self, ctx: &mut Rltk) {
-        ctx.cls();
-
-        // render
-        // -- base map
-        // -- renderables
-        // run state based things
-        // cleanup
-
-        draw_map(&self.ecs, ctx);
-
-        {
-            let positions = self.ecs.read_storage::<Position>();
-            let renderables = self.ecs.read_storage::<Renderable>();
-            let map = self.ecs.fetch::<Map>();
-
-            let mut data = (&positions, &renderables).join().collect::<Vec<_>>();
-            data.sort_by(|&a, &b| b.1.render_order.cmp(&a.1.render_order) );
-            for (pos, render) in data.iter() {
-                let idx = map.xy_idx(pos.x, pos.y);
-                if map.visible_tiles[idx] { ctx.set(pos.x, pos.y, render.fg, render.bg, render.glyph) }
-            }
-
-            gui::draw_ui(&self.ecs, ctx);
-        }
-
         let mut newrunstate;
         {
             let runstate = self.ecs.fetch::<RunState>();
             newrunstate = *runstate;
+        }
+
+        ctx.cls();
+
+        match newrunstate {
+            RunState::MainMenu { .. } => {}
+            _ => {
+                draw_map(&self.ecs, ctx);
+
+                {
+                    let positions = self.ecs.read_storage::<Position>();
+                    let renderables = self.ecs.read_storage::<Renderable>();
+                    let map = self.ecs.fetch::<Map>();
+
+                    let mut data = (&positions, &renderables).join().collect::<Vec<_>>();
+                    data.sort_by(|&a, &b| b.1.render_order.cmp(&a.1.render_order));
+                    for (pos, render) in data.iter() {
+                        let idx = map.xy_idx(pos.x, pos.y);
+                        if map.visible_tiles[idx] {
+                            ctx.set(pos.x, pos.y, render.fg, render.bg, render.glyph)
+                        }
+                    }
+                }
+
+                gui::draw_ui(&self.ecs, ctx);
+            }
         }
 
         match newrunstate {
@@ -138,7 +139,7 @@ impl GameState for State {
                         let item_entity = result.1.unwrap();
                         let is_ranged = self.ecs.read_storage::<Ranged>();
                         let is_item_ranged = is_ranged.get(item_entity);
-                        
+
                         if let Some(is_item_ranged) = is_item_ranged {
                             newrunstate = RunState::ShowTargeting {
                                 range: is_item_ranged.range,
@@ -160,12 +161,32 @@ impl GameState for State {
                     gui::ItemMenuResult::Selected => {
                         let item_entity = result.1.unwrap();
                         let mut intent = self.ecs.write_storage::<WantsToDropItem>();
-                        intent.insert(*self.ecs.fetch::<Entity>(), WantsToDropItem{ item: item_entity }).expect("Unable to insert intent");
+                        intent.insert(*self.ecs.fetch::<Entity>(), WantsToDropItem { item: item_entity }).expect("Unable to insert intent");
                         newrunstate = RunState::PlayerTurn;
                     }
                 }
             }
+            RunState::MainMenu { .. } => {
+                let result = gui::main_menu(self, ctx);
+                match result {
+                    gui::MainMenuResult::NoSelection{ selected } => newrunstate = RunState::MainMenu{ menu_selection: selected },
+                    gui::MainMenuResult::Selected{ selected } => {
+                        match selected {
+                            gui::MainMenuSelection::NewGame => newrunstate = RunState::PreRun,
+                            gui::MainMenuSelection::LoadGame => newrunstate = RunState::PreRun,
+                            gui::MainMenuSelection::Quit => { ::std::process::exit(0); }
+                        }
+                    }
+                }
+            }
+            RunState::SaveGame => {
+                let data = serde_json::to_string(&*self.ecs.fetch::<Map>()).unwrap();
+                println!("{}", data);
+
+                newrunstate = RunState::MainMenu {menu_selection: gui::MainMenuSelection::LoadGame};
+            }
         }
+
         {
             let mut runwriter = self.ecs.write_resource::<RunState>();
             *runwriter = newrunstate;
@@ -175,17 +196,28 @@ impl GameState for State {
 }
 
 #[derive(PartialEq, Copy, Clone)]
-pub enum RunState { AwaitingInput, PreRun, PlayerTurn, MonsterTurn, ShowInventory, ShowDropItem, ShowTargeting{ range: i32, item:Entity} }
+pub enum RunState {
+    AwaitingInput,
+    PreRun,
+    PlayerTurn,
+    MonsterTurn,
+    ShowInventory,
+    ShowDropItem,
+    ShowTargeting {
+        range: i32,
+        item: Entity,
+    },
+    MainMenu {
+        menu_selection: gui::MainMenuSelection,
+    },
+    SaveGame
+}
 
 fn main() -> rltk::BError {
     use rltk::RltkBuilder;
-    let mut context = RltkBuilder::simple80x50()
-        .with_title("Rouge")
-        .build()?;
+    let mut context = RltkBuilder::simple80x50().with_title("Rouge").build()?;
 
-    let mut gs = State {
-        ecs: World::new()
-    };
+    let mut gs = State { ecs: World::new() };
 
     register_components(&mut gs);
 
@@ -205,7 +237,9 @@ fn main() -> rltk::BError {
     }
 
     gs.ecs.insert(map);
-    gs.ecs.insert(gamelog::GameLog{entries: vec!["Welcome to the game.".into()]});
+    gs.ecs.insert(gamelog::GameLog {
+        entries: vec!["Welcome to the game.".into()],
+    });
 
     gs.ecs.insert(Point::new(player_x, player_y));
 
@@ -232,4 +266,6 @@ fn register_components(gs: &mut State) {
     gs.ecs.register::<Consumable>();
     gs.ecs.register::<Ranged>();
     gs.ecs.register::<InflictsDamage>();
+    gs.ecs.register::<AreaOfEffect>();
+    gs.ecs.register::<Confusion>();
 }
