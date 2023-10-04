@@ -1,7 +1,9 @@
 use super::{BlocksTile, CombatStats, Monster, Name, Player, Position, Renderable, Viewshed};
-use crate::{Item, ProvidesHealing, Rect, MAPWIDTH, Consumable, Ranged, InflictsDamage, AreaOfEffect, Confusion};
+use crate::{Item, ProvidesHealing, Rect, MAPWIDTH, Consumable, Ranged, InflictsDamage, AreaOfEffect, Confusion, SerializeMe};
 use rltk::{FontCharType, RandomNumberGenerator, RGB};
 use specs::prelude::*;
+use specs::saveload::SimpleMarker;
+use specs::saveload::MarkedBuilder;
 
 const MAX_MONSTERS: i32 = 4;
 const MAX_ITEMS: i32 = 2;
@@ -103,6 +105,7 @@ fn confusion_scroll(ecs: &mut World, x: i32, y: i32) {
         .with(Consumable{})
         .with(Ranged{ range: 6 })
         .with(Confusion{ turns: 4 })
+        .marked::<SimpleMarker<SerializeMe>>()
         .build();
 }
 
@@ -121,6 +124,7 @@ fn fireball_scroll(ecs: &mut World, x: i32, y: i32) {
         .with(Ranged{ range: 6 })
         .with(InflictsDamage{ damage: 20 })
         .with(AreaOfEffect{ radius: 3 })
+        .marked::<SimpleMarker<SerializeMe>>()
         .build();
 }
 
@@ -138,6 +142,7 @@ fn magic_missile_scroll(ecs:&mut World, x: i32, y: i32) {
         .with(Consumable{})
         .with(Ranged{range: 6})
         .with(InflictsDamage{damage:6})
+        .marked::<SimpleMarker<SerializeMe>>()
         .build();
 }
 
@@ -156,6 +161,7 @@ fn health_potion(ecs: &mut World, x: i32, y: i32) {
         .with(Item {})
         .with(Consumable {})
         .with(ProvidesHealing { heal_amount: 8 })
+        .marked::<SimpleMarker<SerializeMe>>()
         .build();
 }
 
@@ -183,9 +189,10 @@ pub fn player(ecs: &mut World, player_x: i32, player_y: i32) -> Entity {
         .with(CombatStats {
             max_hp: 30,
             hp: 30,
-            defence: 2,
+            defense: 2,
             power: 5,
         })
+        .marked::<SimpleMarker<SerializeMe>>()
         .build()
 }
 
@@ -232,9 +239,10 @@ fn monster<S: ToString>(ecs: &mut World, x: i32, y: i32, glyph: FontCharType, na
         .with(CombatStats {
             max_hp: 16,
             hp: 16,
-            defence: 1,
+            defense: 1,
             power: 0,
             //power: 4,
         })
+        .marked::<SimpleMarker<SerializeMe>>()
         .build();
 }

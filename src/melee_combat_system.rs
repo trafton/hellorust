@@ -25,7 +25,7 @@ impl<'a> System<'a> for MeleeCombatSystem {
                     Some(target_stats) => {
                         if target_stats.hp > 0 {
                             let target_name = names.get(wants_melee.target).unwrap();
-                            let damage = i32::max(0, stats.power - target_stats.defence);
+                            let damage = i32::max(0, stats.power - target_stats.defense);
 
                             if damage == 0 {
                                 log.entries.push(format!("{} is unable to hurt {}", &name.name, &target_name.name));

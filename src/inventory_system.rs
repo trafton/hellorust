@@ -1,5 +1,5 @@
 use crate::gamelog::GameLog;
-use crate::{CombatStats, Consumable, InBackPack, Name, Position, ProvidesHealing, WantsToUseItem, WantsToDropItem, WantsToPickupItem, InflictsDamage, Map, SufferDamage, AreaOfEffect, Confusion};
+use crate::{CombatStats, Consumable, InBackpack, Name, Position, ProvidesHealing, WantsToUseItem, WantsToDropItem, WantsToPickupItem, InflictsDamage, Map, SufferDamage, AreaOfEffect, Confusion};
 use specs::prelude::*;
 
 pub struct ItemCollectionSystem {}
@@ -11,7 +11,7 @@ impl<'a> System<'a> for ItemCollectionSystem {
         WriteStorage<'a, WantsToPickupItem>,
         WriteStorage<'a, Position>,
         ReadStorage<'a, Name>,
-        WriteStorage<'a, InBackPack>,
+        WriteStorage<'a, InBackpack>,
     );
 
     fn run(&mut self, data: Self::SystemData) {
@@ -20,7 +20,7 @@ impl<'a> System<'a> for ItemCollectionSystem {
 
         for pickup in wants_pickup.join() {
             positions.remove(pickup.item);
-            backpack.insert(pickup.item, InBackPack{ owner: pickup.collected_by }).expect("Unable to insert into backpack entry");
+            backpack.insert(pickup.item, InBackpack{ owner: pickup.collected_by }).expect("Unable to insert into backpack entry");
 
             if pickup.collected_by == *player_entity {
                 gamelog.entries.push(format!("You pick up {}.", names.get(pickup.item).unwrap().name));
@@ -169,7 +169,7 @@ impl<'a> System<'a> for ItemDropSystem {
                         WriteStorage<'a, WantsToDropItem>,
                         ReadStorage<'a, Name>,
                         WriteStorage<'a, Position>,
-                        WriteStorage<'a, InBackPack>
+                        WriteStorage<'a, InBackpack>
     );
 
     fn run(&mut self, data: Self::SystemData) {

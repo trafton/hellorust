@@ -1,7 +1,8 @@
 extern crate serde;
-
-use rltk::{GameState, Point, Rltk, RGB};
+use rltk::{GameState, Rltk, Point};
 use specs::prelude::*;
+use specs::saveload::{SimpleMarker, SimpleMarkerAllocator};
+
 mod components;
 pub use components::*;
 mod map;
@@ -20,6 +21,7 @@ mod map_indexing_system;
 mod melee_combat_system;
 mod spawner;
 mod visibility_system;
+mod saveload_system;
 
 use crate::damage_system::DamageSystem;
 use crate::gui::ItemMenuResult;
@@ -173,17 +175,19 @@ impl GameState for State {
                     gui::MainMenuResult::Selected{ selected } => {
                         match selected {
                             gui::MainMenuSelection::NewGame => newrunstate = RunState::PreRun,
-                            gui::MainMenuSelection::LoadGame => newrunstate = RunState::PreRun,
+                            gui::MainMenuSelection::LoadGame => {
+                                saveload_system::load_game(&mut self.ecs);
+                                newrunstate = RunState::AwaitingInput;
+                                saveload_system::delete_save();
+                            }
                             gui::MainMenuSelection::Quit => { ::std::process::exit(0); }
                         }
                     }
                 }
             }
             RunState::SaveGame => {
-                let data = serde_json::to_string(&*self.ecs.fetch::<Map>()).unwrap();
-                println!("{}", data);
-
-                newrunstate = RunState::MainMenu {menu_selection: gui::MainMenuSelection::LoadGame};
+                saveload_system::save_game(&mut self.ecs);
+                newrunstate = RunState::MainMenu{ menu_selection : gui::MainMenuSelection::LoadGame };
             }
         }
 
@@ -223,6 +227,8 @@ fn main() -> rltk::BError {
 
     gs.ecs.insert(RunState::PreRun);
     gs.ecs.insert(rltk::RandomNumberGenerator::new());
+    gs.ecs.insert(SimpleMarkerAllocator::<SerializeMe>::new());
+
 
     let map: Map = Map::new_map_rooms_and_corridors();
     let (player_x, player_y) = map.rooms[0].center();
@@ -260,7 +266,7 @@ fn register_components(gs: &mut State) {
     gs.ecs.register::<Item>();
     gs.ecs.register::<ProvidesHealing>();
     gs.ecs.register::<WantsToPickupItem>();
-    gs.ecs.register::<InBackPack>();
+    gs.ecs.register::<InBackpack>();
     gs.ecs.register::<WantsToUseItem>();
     gs.ecs.register::<WantsToDropItem>();
     gs.ecs.register::<Consumable>();
@@ -268,4 +274,7 @@ fn register_components(gs: &mut State) {
     gs.ecs.register::<InflictsDamage>();
     gs.ecs.register::<AreaOfEffect>();
     gs.ecs.register::<Confusion>();
+
+    gs.ecs.register::<SimpleMarker<SerializeMe>>();
+    gs.ecs.register::<SerializationHelper>();
 }
