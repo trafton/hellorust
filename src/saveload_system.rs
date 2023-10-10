@@ -5,6 +5,7 @@ use super::components::*;
 use std::fs::File;
 use std::path::Path;
 use std::fs;
+use crate::gamelog::GameLog;
 
 macro_rules! serialize_individually {
     ($ecs:expr, $ser:expr, $data:expr, $( $type:ty),*) => {
@@ -27,6 +28,11 @@ pub fn save_game(_ecs : &mut World) {
 #[cfg(not(target_arch = "wasm32"))]
 pub fn save_game(ecs : &mut World) {
     // Create helper
+    {
+        let mut log = ecs.fetch_mut::<GameLog>();
+        log.entries.push("Saving game...".into());
+    }
+
     let mapcopy = ecs.get_mut::<super::map::Map>().unwrap().clone();
     let savehelper = ecs
         .create_entity()
@@ -49,6 +55,11 @@ pub fn save_game(ecs : &mut World) {
 
     // Clean up
     ecs.delete_entity(savehelper).expect("Crash on cleanup");
+
+    {
+        let mut log = ecs.fetch_mut::<GameLog>();
+        log.entries.push("Saved!".into());
+    }
 }
 
 pub fn does_save_exist() -> bool {

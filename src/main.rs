@@ -75,6 +75,7 @@ impl GameState for State {
 
         ctx.cls();
 
+
         match newrunstate {
             RunState::MainMenu { .. } => {}
             _ => {
@@ -178,7 +179,7 @@ impl GameState for State {
                             gui::MainMenuSelection::LoadGame => {
                                 saveload_system::load_game(&mut self.ecs);
                                 newrunstate = RunState::AwaitingInput;
-                                saveload_system::delete_save();
+                          //      saveload_system::delete_save();
                             }
                             gui::MainMenuSelection::Quit => { ::std::process::exit(0); }
                         }
@@ -230,7 +231,7 @@ fn main() -> rltk::BError {
     gs.ecs.insert(SimpleMarkerAllocator::<SerializeMe>::new());
 
 
-    let map: Map = Map::new_map_rooms_and_corridors();
+    let map: Map = Map::new_map_rooms_and_corridors(1);
     let (player_x, player_y) = map.rooms[0].center();
 
     let player_entity = spawner::player(&mut gs.ecs, player_x, player_y);
