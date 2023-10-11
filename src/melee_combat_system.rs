@@ -39,5 +39,7 @@ impl<'a> System<'a> for MeleeCombatSystem {
 
             }
         }
+
+        wants_to_melee.clear();
     }
 }
