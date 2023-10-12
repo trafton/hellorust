@@ -5,6 +5,9 @@ use serde::{Serialize, Deserialize};
 use specs::saveload::{Marker, ConvertSaveload};
 use specs::error::NoError;
 
+#[derive(PartialEq, Copy, Clone, Serialize, Deserialize)]
+pub enum EquipmentSlot{ Melee, Shield}
+
 #[derive(Component, ConvertSaveload, Clone)]
 pub struct Position {
     pub x: i32,
@@ -20,7 +23,18 @@ pub struct Renderable {
 }
 
 #[derive(Component, Serialize, Deserialize, Clone)]
+pub struct Equippable {
+    pub slot: EquipmentSlot
+}
+
+#[derive(Component, ConvertSaveload, Clone)]
+pub struct Equipped {
+    pub owner: Entity,
+    pub slot: EquipmentSlot
+}
+#[derive(Component, Serialize, Deserialize, Clone)]
 pub struct Player {}
+
 
 #[derive(Component, ConvertSaveload, Clone)]
 pub struct Viewshed {
@@ -46,6 +60,16 @@ pub struct CombatStats {
     pub hp : i32,
     pub defense : i32,
     pub power : i32
+}
+
+#[derive(Component, ConvertSaveload, Clone)]
+pub struct MeleePowerBonus {
+    pub power : i32
+}
+
+#[derive(Component, ConvertSaveload, Clone)]
+pub struct DefenseBonus {
+    pub defense : i32
 }
 
 #[derive(Component, Debug, ConvertSaveload, Clone)]

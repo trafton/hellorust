@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use super::{BlocksTile, CombatStats, Monster, Name, Player, Position, Renderable, Viewshed};
-use crate::{Item, ProvidesHealing, Rect, MAPWIDTH, Consumable, Ranged, InflictsDamage, AreaOfEffect, Confusion, SerializeMe};
+use crate::{Item, ProvidesHealing, Rect, MAPWIDTH, Consumable, Ranged, InflictsDamage, AreaOfEffect, Confusion, SerializeMe, Equippable, EquipmentSlot, MeleePowerBonus, DefenseBonus};
 use rltk::{FontCharType, RandomNumberGenerator, RGB};
 use specs::prelude::*;
 use specs::saveload::SimpleMarker;
@@ -47,6 +47,8 @@ pub fn spawn_room(ecs: &mut World, room: &Rect, map_depth: i32) {
             "Fireball Scroll" => fireball_scroll(ecs, x, y),
             "Confusion Scroll" => confusion_scroll(ecs, x, y),
             "Magic Missile Scroll" => magic_missile_scroll(ecs, x, y),
+            "Dagger" => dagger(ecs, x, y),
+            "Shield" => shield(ecs, x, y),
             _ => {}
         }
     }
@@ -60,6 +62,8 @@ fn room_table(map_depth: i32) -> RandomTable {
         .add("Fireball Scroll", 2 + map_depth)
         .add("Confusion Scroll", 2 + map_depth)
         .add("Magic Missile Scroll", 4)
+        .add("Dagger", 3)
+        .add("Shield", 3)
 }
 
 pub fn test_room(ecs: &mut World,room: &Rect) {
@@ -92,6 +96,40 @@ fn random_item(ecs: &mut World, x: i32, y: i32) {
         3 => {confusion_scroll(ecs, x, y)}
         _ => { magic_missile_scroll(ecs, x, y)}
     }
+}
+
+fn dagger(ecs: &mut World, x: i32, y: i32) {
+    ecs.create_entity()
+        .with(Position{ x, y })
+        .with(Renderable{
+            glyph: rltk::to_cp437('/'),
+            fg: RGB::named(rltk::CYAN),
+            bg: RGB::named(rltk::BLACK),
+            render_order: 2
+        })
+        .with(Name{ name : "Dagger".to_string() })
+        .with(Item{})
+        .with(Equippable{ slot: EquipmentSlot::Melee })
+        .with(MeleePowerBonus{ power: 2 })
+        .marked::<SimpleMarker<SerializeMe>>()
+        .build();
+}
+
+fn shield(ecs: &mut World, x: i32, y: i32) {
+    ecs.create_entity()
+        .with(Position{ x, y })
+        .with(Renderable{
+            glyph: rltk::to_cp437('('),
+            fg: RGB::named(rltk::CYAN),
+            bg: RGB::named(rltk::BLACK),
+            render_order: 2
+        })
+        .with(Name{ name : "Shield".to_string() })
+        .with(Item{})
+        .with(Equippable{ slot: EquipmentSlot::Shield })
+        .with(DefenseBonus{ defense: 1 })
+        .marked::<SimpleMarker<SerializeMe>>()
+        .build();
 }
 
 fn confusion_scroll(ecs: &mut World, x: i32, y: i32) {
