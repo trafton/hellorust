@@ -267,7 +267,7 @@ pub fn player(ecs: &mut World, player_x: i32, player_y: i32) -> Entity {
         })
         .with(CombatStats {
             max_hp: 30,
-            hp: 20,
+            hp: 30,
             defense: 2,
             power: 5,
         })
@@ -319,8 +319,8 @@ fn monster<S: ToString>(ecs: &mut World, x: i32, y: i32, glyph: FontCharType, na
             max_hp: 16,
             hp: 16,
             defense: 1,
-            power: 0,
-            //power: 4,
+            //power: 0,
+            power: 4,
         })
         .marked::<SimpleMarker<SerializeMe>>()
         .build();
