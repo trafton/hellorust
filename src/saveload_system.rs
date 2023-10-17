@@ -5,7 +5,6 @@ use super::components::*;
 use std::fs::File;
 use std::path::Path;
 use std::fs;
-use crate::gamelog::GameLog;
 
 macro_rules! serialize_individually {
     ($ecs:expr, $ser:expr, $data:expr, $( $type:ty),*) => {
@@ -28,11 +27,6 @@ pub fn save_game(_ecs : &mut World) {
 #[cfg(not(target_arch = "wasm32"))]
 pub fn save_game(ecs : &mut World) {
     // Create helper
-    {
-        let mut log = ecs.fetch_mut::<GameLog>();
-        log.entries.push("Saving game...".into());
-    }
-
     let mapcopy = ecs.get_mut::<super::map::Map>().unwrap().clone();
     let savehelper = ecs
         .create_entity()
@@ -49,17 +43,14 @@ pub fn save_game(ecs : &mut World) {
         serialize_individually!(ecs, serializer, data, Position, Renderable, Player, Viewshed, Monster,
             Name, BlocksTile, CombatStats, SufferDamage, WantsToMelee, Item, Consumable, Ranged, InflictsDamage,
             AreaOfEffect, Confusion, ProvidesHealing, InBackpack, WantsToPickupItem, WantsToUseItem,
-            WantsToDropItem, SerializationHelper, Equippable, Equipped, MeleePowerBonus, DefenseBonus, WantsToRemoveItem
+            WantsToDropItem, SerializationHelper, Equippable, Equipped, MeleePowerBonus, DefenseBonus,
+            WantsToRemoveItem, ParticleLifetime, HungerClock, ProvidesFood, MagicMapper, Hidden,
+            EntryTrigger, EntityMoved, SingleActivation
         );
     }
 
     // Clean up
     ecs.delete_entity(savehelper).expect("Crash on cleanup");
-
-    {
-        let mut log = ecs.fetch_mut::<GameLog>();
-        log.entries.push("Saved!".into());
-    }
 }
 
 pub fn does_save_exist() -> bool {
@@ -102,7 +93,9 @@ pub fn load_game(ecs: &mut World) {
         deserialize_individually!(ecs, de, d, Position, Renderable, Player, Viewshed, Monster,
             Name, BlocksTile, CombatStats, SufferDamage, WantsToMelee, Item, Consumable, Ranged, InflictsDamage,
             AreaOfEffect, Confusion, ProvidesHealing, InBackpack, WantsToPickupItem, WantsToUseItem,
-            WantsToDropItem, SerializationHelper, Equippable, Equipped, MeleePowerBonus, DefenseBonus, WantsToRemoveItem
+            WantsToDropItem, SerializationHelper, Equippable, Equipped, MeleePowerBonus, DefenseBonus,
+            WantsToRemoveItem, ParticleLifetime, HungerClock, ProvidesFood, MagicMapper, Hidden,
+            EntryTrigger, EntityMoved, SingleActivation
         );
     }
 

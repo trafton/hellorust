@@ -5,9 +5,6 @@ use serde::{Serialize, Deserialize};
 use specs::saveload::{Marker, ConvertSaveload};
 use specs::error::NoError;
 
-#[derive(PartialEq, Copy, Clone, Serialize, Deserialize)]
-pub enum EquipmentSlot{ Melee, Shield}
-
 #[derive(Component, ConvertSaveload, Clone)]
 pub struct Position {
     pub x: i32,
@@ -22,19 +19,8 @@ pub struct Renderable {
     pub render_order : i32
 }
 
-#[derive(Component, Serialize, Deserialize, Clone)]
-pub struct Equippable {
-    pub slot: EquipmentSlot
-}
-
-#[derive(Component, ConvertSaveload, Clone)]
-pub struct Equipped {
-    pub owner: Entity,
-    pub slot: EquipmentSlot
-}
-#[derive(Component, Serialize, Deserialize, Clone)]
+#[derive(Component, Debug, Serialize, Deserialize, Clone)]
 pub struct Player {}
-
 
 #[derive(Component, ConvertSaveload, Clone)]
 pub struct Viewshed {
@@ -60,16 +46,6 @@ pub struct CombatStats {
     pub hp : i32,
     pub defense : i32,
     pub power : i32
-}
-
-#[derive(Component, ConvertSaveload, Clone)]
-pub struct MeleePowerBonus {
-    pub power : i32
-}
-
-#[derive(Component, ConvertSaveload, Clone)]
-pub struct DefenseBonus {
-    pub defense : i32
 }
 
 #[derive(Component, Debug, ConvertSaveload, Clone)]
@@ -124,33 +100,90 @@ pub struct ProvidesHealing {
     pub heal_amount : i32
 }
 
-#[derive(Component, Debug, ConvertSaveload)]
+#[derive(Component, Debug, ConvertSaveload, Clone)]
 pub struct InBackpack {
     pub owner : Entity
 }
 
 #[derive(Component, Debug, ConvertSaveload, Clone)]
-pub struct WantsToRemoveItem {
-    pub item: Entity
-}
-#[derive(Component, Debug, ConvertSaveload)]
 pub struct WantsToPickupItem {
     pub collected_by : Entity,
     pub item : Entity
 }
 
-#[derive(Component, Debug, ConvertSaveload)]
+#[derive(Component, Debug, ConvertSaveload, Clone)]
 pub struct WantsToUseItem {
     pub item : Entity,
     pub target : Option<rltk::Point>
 }
 
-#[derive(Component, Debug, ConvertSaveload)]
+#[derive(Component, Debug, ConvertSaveload, Clone)]
 pub struct WantsToDropItem {
     pub item : Entity
 }
 
-// Serialization helper code. We need to implement ConvertSaveload for each type that contains an
+#[derive(Component, Debug, ConvertSaveload, Clone)]
+pub struct WantsToRemoveItem {
+    pub item : Entity
+}
+
+#[derive(PartialEq, Copy, Clone, Serialize, Deserialize)]
+pub enum EquipmentSlot { Melee, Shield }
+
+#[derive(Component, Serialize, Deserialize, Clone)]
+pub struct Equippable {
+    pub slot : EquipmentSlot
+}
+
+#[derive(Component, ConvertSaveload, Clone)]
+pub struct Equipped {
+    pub owner : Entity,
+    pub slot : EquipmentSlot
+}
+
+#[derive(Component, ConvertSaveload, Clone)]
+pub struct MeleePowerBonus {
+    pub power : i32
+}
+
+#[derive(Component, ConvertSaveload, Clone)]
+pub struct DefenseBonus {
+    pub defense : i32
+}
+
+#[derive(Component, Serialize, Deserialize, Clone)]
+pub struct ParticleLifetime {
+    pub lifetime_ms : f32
+}
+
+#[derive(Serialize, Deserialize, Copy, Clone, PartialEq)]
+pub enum HungerState { WellFed, Normal, Hungry, Starving }
+
+#[derive(Component, Serialize, Deserialize, Clone)]
+pub struct HungerClock {
+    pub state : HungerState,
+    pub duration : i32
+}
+
+#[derive(Component, Debug, Serialize, Deserialize, Clone)]
+pub struct ProvidesFood {}
+
+#[derive(Component, Debug, Serialize, Deserialize, Clone)]
+pub struct MagicMapper {}
+
+#[derive(Component, Debug, Serialize, Deserialize, Clone)]
+pub struct Hidden {}
+
+#[derive(Component, Debug, Serialize, Deserialize, Clone)]
+pub struct EntryTrigger {}
+
+#[derive(Component, Debug, Serialize, Deserialize, Clone)]
+pub struct EntityMoved {}
+
+#[derive(Component, Debug, Serialize, Deserialize, Clone)]
+pub struct SingleActivation {}
+
+// Serialization helper code. We need to implement ConvertSaveLoad for each type that contains an
 // Entity.
 
 pub struct SerializeMe;
